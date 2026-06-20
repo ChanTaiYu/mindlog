@@ -57,6 +57,9 @@ flutter run            # on an Android device or emulator
 > Biometrics, camera and notifications require a physical Android device or a hardware-
 > accelerated emulator. **Settings → Add sample data** populates demo entries/tasks.
 
+**New to running this on the emulator?** See **[SETUP_GUIDE.md](SETUP_GUIDE.md)** for
+step-by-step instructions (BIOS virtualization, launching the emulator, hot reload, demo tips).
+
 ## Tests
 
 ```bash
