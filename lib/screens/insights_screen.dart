@@ -9,75 +9,53 @@ import '../providers/task_provider.dart';
 
 /// Combines mood (from diary) and tasks completed to surface how mood relates
 /// to productivity — MindLog's signature insight.
-class InsightsScreen extends StatefulWidget {
+class InsightsScreen extends StatelessWidget {
   const InsightsScreen({super.key});
 
-  @override
-  State<InsightsScreen> createState() => _InsightsScreenState();
-}
-
-class _InsightsScreenState extends State<InsightsScreen> {
   static const _days = 14;
-
-  late Future<_InsightData> _future = _load();
-
-  Future<_InsightData> _load() async {
-    final diary = context.read<DiaryProvider>();
-    final tasks = context.read<TaskProvider>();
-    final mood = await diary.moodTrend(_days);
-    final done = await tasks.completedPerDay(_days);
-    return _InsightData(mood: mood, done: done);
-  }
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild when entries/tasks change.
-    context.watch<DiaryProvider>();
-    context.watch<TaskProvider>();
-    _future = _load();
+    // Computed synchronously from the already-loaded providers so the screen
+    // never depends on an async future resolving.
+    final diary = context.watch<DiaryProvider>();
+    final tasks = context.watch<TaskProvider>();
+    final data = _InsightData.fromProviders(diary, tasks, _days);
 
-    return FutureBuilder<_InsightData>(
-      future: _future,
-      builder: (context, snap) {
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final data = snap.data!;
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text('Mood & productivity',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 4),
-            Text('Last $_days days',
-                style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 16),
-            Card(
-              color: Theme.of(context).colorScheme.secondaryContainer,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Icon(Icons.lightbulb_outline),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(data.insightText())),
-                  ],
-                ),
-              ),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Mood & productivity',
+            style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 4),
+        Text('Last $_days days',
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 16),
+        Card(
+          color: Theme.of(context).colorScheme.secondaryContainer,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.lightbulb_outline),
+                const SizedBox(width: 12),
+                Expanded(child: Text(data.insightText())),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text('Tasks completed per day',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text('Bar colour reflects that day’s average mood.',
-                style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 12),
-            SizedBox(height: 220, child: _ProductivityChart(data: data, days: _days)),
-            const SizedBox(height: 16),
-            const _Legend(),
-          ],
-        );
-      },
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text('Tasks completed per day',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text('Bar colour reflects that day’s average mood.',
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 12),
+        SizedBox(
+            height: 220, child: _ProductivityChart(data: data, days: _days)),
+        const SizedBox(height: 16),
+        const _Legend(),
+      ],
     );
   }
 }
@@ -87,6 +65,35 @@ class _InsightData {
 
   final Map<DateTime, double> mood; // day → avg mood score
   final Map<DateTime, int> done; // day → tasks completed
+
+  /// Aggregates the last [days] days from in-memory entries and tasks.
+  factory _InsightData.fromProviders(
+      DiaryProvider diary, TaskProvider tasks, int days) {
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: days - 1));
+
+    final moodByDay = <DateTime, List<int>>{};
+    for (final e in diary.entries) {
+      final d = DateTime(e.date.year, e.date.month, e.date.day);
+      if (d.isBefore(start)) continue;
+      moodByDay.putIfAbsent(d, () => []).add(e.mood.score);
+    }
+    final mood = {
+      for (final e in moodByDay.entries)
+        e.key: e.value.reduce((a, b) => a + b) / e.value.length,
+    };
+
+    final done = <DateTime, int>{};
+    for (final t in tasks.tasks) {
+      final c = t.completedAt;
+      if (c == null) continue;
+      final d = DateTime(c.year, c.month, c.day);
+      if (d.isBefore(start)) continue;
+      done[d] = (done[d] ?? 0) + 1;
+    }
+    return _InsightData(mood: mood, done: done);
+  }
 
   String insightText() {
     final goodDays = <int>[];

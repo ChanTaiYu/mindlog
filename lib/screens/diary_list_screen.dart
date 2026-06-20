@@ -4,46 +4,39 @@ import 'package:provider/provider.dart';
 import '../providers/diary_provider.dart';
 import '../widgets/entry_card.dart';
 import 'diary_detail_screen.dart';
-import 'diary_editor_screen.dart';
 
+/// Body content for the Diary tab. The "New entry" FAB lives on [HomeShell] so
+/// this screen is not a nested Scaffold inside the shell's IndexedStack.
 class DiaryListScreen extends StatelessWidget {
   const DiaryListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<DiaryProvider>();
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DiaryEditorScreen()),
-        ),
-        icon: const Icon(Icons.add),
-        label: const Text('New entry'),
+    if (provider.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (provider.entries.isEmpty) {
+      return const _EmptyDiary();
+    }
+    return RefreshIndicator(
+      onRefresh: () => provider.load(),
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
+        itemCount: provider.entries.length,
+        itemBuilder: (context, i) {
+          final entry = provider.entries[i];
+          return EntryCard(
+            entry: entry,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DiaryDetailScreen(entry: entry),
+              ),
+            ),
+          );
+        },
       ),
-      body: provider.loading
-          ? const Center(child: CircularProgressIndicator())
-          : provider.entries.isEmpty
-              ? const _EmptyDiary()
-              : RefreshIndicator(
-                  onRefresh: () => provider.load(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
-                    itemCount: provider.entries.length,
-                    itemBuilder: (context, i) {
-                      final entry = provider.entries[i];
-                      return EntryCard(
-                        entry: entry,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => DiaryDetailScreen(entry: entry),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
     );
   }
 }

@@ -47,7 +47,15 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              FilledButton(onPressed: _add, child: const Text('Add')),
+              // Bounded minimum width: the global theme uses Size.fromHeight(52)
+              // (infinite min width) which is invalid inside a Row.
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(72, 52),
+                ),
+                onPressed: _add,
+                child: const Text('Add'),
+              ),
             ],
           ),
         ),

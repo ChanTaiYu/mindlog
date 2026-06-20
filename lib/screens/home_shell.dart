@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/diary_provider.dart';
 import '../providers/task_provider.dart';
+import 'diary_editor_screen.dart';
 import 'diary_list_screen.dart';
 import 'home_dashboard_screen.dart';
 import 'insights_screen.dart';
@@ -69,6 +70,15 @@ class _HomeShellState extends State<HomeShell> {
         ],
       ),
       body: IndexedStack(index: _index, children: pages),
+      floatingActionButton: _index == 1
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DiaryEditorScreen()),
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('New entry'),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
