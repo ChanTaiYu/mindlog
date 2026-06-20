@@ -1,108 +1,148 @@
 # MindLog — Setup & Run Guide
 
-How to run MindLog on the Android emulator on this Windows PC. Written for this exact
-machine (AMD Ryzen 5 5600, Android SDK at `C:\Users\chan\AppData\Local\Android\Sdk`,
-Flutter at `C:\Users\chan\flutter`).
+How to get MindLog running on the Android emulator on a Windows PC — including a **fresh
+laptop** that has never had Flutter installed.
+
+> **Paths in this guide** use the username `chan` (e.g. `C:\Users\chan\...`). On another
+> laptop, replace `chan` with **your** Windows username, and use wherever you actually
+> installed Flutter / the Android SDK. The `flutter` command works from any folder once it's
+> on your PATH (see Part 1).
 
 ---
 
-## TL;DR — run it (after the one-time setup below is done)
+## Part 1 — One-time machine setup (do this once per laptop)
 
-```powershell
-# 1. Start the emulator
-flutter emulators --launch Medium_Phone_API_36.1
+If this laptop already has Flutter + Android Studio working (`flutter doctor` is happy and
+`flutter emulators` lists a device), skip to **Part 2**.
 
-# 2. From the project folder, run the app on it
-cd "C:\Users\chan\Mobile App Development\mindlog"
-flutter run
-```
+### 1.1 Install the toolchain
+1. **Android Studio** — https://developer.android.com/studio
+   Installing it gives you the **Android SDK**, the **emulator**, the **Device Manager**, and
+   a bundled **JDK** all at once. During first launch, let it download the default SDK
+   components.
+2. **Flutter SDK** — https://docs.flutter.dev/get-started/install/windows
+   Unzip it (e.g. to `C:\Users\<you>\flutter`) and add `...\flutter\bin` to your **PATH**.
+3. Open a **new** PowerShell window and accept the Android licenses:
+   ```powershell
+   flutter doctor --android-licenses     # press y to accept all
+   flutter doctor                        # everything Android-related should be ✓
+   ```
+   This project was built with **Flutter 3.41.x / Dart 3.11.x** — any 3.41+ stable is fine.
 
-Then in the `flutter run` terminal: press **r** = hot reload, **R** = hot restart,
-**q** = quit.
-
----
-
-## One-time setup (already completed on this PC ✅)
-
-You only ever do this once. It's recorded here so you can repeat it on another machine or
-after a Windows reset.
-
-### 1. Enable CPU virtualization in BIOS (done)
-The emulator needs hardware acceleration. On AMD this is **SVM Mode**.
-- Reboot → press **Del** (or F2) at startup to enter BIOS/UEFI.
-- Find **SVM Mode** (often under *Advanced → CPU Configuration*, or *OC* on MSI boards)
-  and set it to **Enabled**.
-- Save & exit (F10).
-- Verify in PowerShell — should print `True`:
+### 1.2 Enable CPU virtualization in BIOS (required for the emulator)
+The emulator needs hardware acceleration.
+- Reboot → press **Del** or **F2** at startup to enter BIOS/UEFI.
+- Turn on virtualization:
+  - **AMD CPUs:** look for **SVM Mode** (often under *Advanced → CPU Configuration*, or *OC*
+    on MSI boards) → **Enabled**.
+  - **Intel CPUs:** look for **Intel VT-x / Virtualization Technology** → **Enabled**.
+- Save & exit (F10). Back in Windows, verify (should print `True`):
   ```powershell
   (Get-CimInstance Win32_Processor).VirtualizationFirmwareEnabled
   ```
 
-### 2. Confirm the emulator has an accelerator (done — uses WHPX)
+### 1.3 Confirm emulator acceleration
 ```powershell
-& "C:\Users\chan\AppData\Local\Android\Sdk\emulator\emulator.exe" -accel-check
+& "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" -accel-check
 ```
-On this PC it reports `accel: 0` → **"WHPX is installed and usable."** That's all that's
-needed — nothing else to install.
+You want `accel: 0` and a message like **"WHPX is installed and usable"** (Windows
+Hypervisor Platform). On this original PC it used WHPX — nothing extra to install.
 
-> **If `-accel-check` ever fails** (e.g. on a PC without WHPX), install the bundled
-> Android Emulator Hypervisor Driver instead. Run an **Administrator** terminal and:
+> **If `-accel-check` fails** on the new laptop, install the bundled hypervisor driver from
+> an **Administrator** terminal:
 > ```powershell
-> cd "C:\Users\chan\AppData\Local\Android\Sdk\extras\google\Android_Emulator_Hypervisor_Driver"
+> cd "$env:LOCALAPPDATA\Android\Sdk\extras\google\Android_Emulator_Hypervisor_Driver"
 > .\silent_install.bat
 > ```
-> Note: AEHD requires Hyper-V/WHPX to be **off**; WHPX and AEHD are alternatives, not both.
+> WHPX and AEHD are alternatives — use one. (If WHPX is on, you don't need AEHD.)
+> If WHPX isn't enabled, turn it on: *Windows Features → tick "Windows Hypervisor Platform"
+> and "Virtual Machine Platform" → reboot.*
+
+### 1.4 Create an emulator (a fresh laptop has none!)
+The AVD named `Medium_Phone_API_36.1` only exists on the original PC. On a new laptop, make
+one:
+- **Android Studio → (⋮ / More Actions) → Virtual Device Manager → Create Device**
+- Pick e.g. **Pixel 7**, a system image like **API 34/35/36 (x86_64)** (download it), Finish.
+
+Then confirm Flutter sees it:
+```powershell
+flutter emulators        # note the Id shown, e.g. Pixel_7_API_34
+```
 
 ---
 
-## Running step by step
+## Part 2 — Get the project onto the laptop
 
-### Step A — list and launch the emulator
+### Option A — GitHub (recommended, no stale files)
 ```powershell
-flutter emulators                                   # shows available AVDs
-flutter emulators --launch Medium_Phone_API_36.1    # boot the phone
-```
-A phone window opens. Wait until the Android home screen is fully loaded (~30–60s the first
-time). Check it's connected:
-```powershell
-flutter devices         # should list "sdk gphone64 x86 64 (mobile) • emulator-5554"
+git clone <your-repo-url> mindlog
+cd mindlog
 ```
 
-### Step B — run MindLog
+### Option B — Zip transfer
+**On this PC, before zipping**, strip the machine-specific build cache so the zip is small
+and clean:
 ```powershell
 cd "C:\Users\chan\Mobile App Development\mindlog"
+flutter clean
+```
+Zip the `mindlog` folder, copy it over, unzip it on the new laptop.
+✅ Keep `lib/ android/ ios/ pubspec.yaml pubspec.lock test/ README.md`.
+❌ `build/ .dart_tool/ .gradle/` are not needed — they regenerate.
+
+### Either way — fetch dependencies after you have the folder
+```powershell
+cd <path-to>\mindlog
+flutter pub get          # downloads the packages (needs internet)
+```
+
+---
+
+## Part 3 — Run it
+
+```powershell
+# 1. Start your emulator (use the Id from `flutter emulators`)
+flutter emulators --launch Pixel_7_API_34        # <- your AVD id here
+
+# 2. Confirm it's connected (wait until the Android home screen loads)
+flutter devices
+
+# 3. From the project folder, run the app
+cd <path-to>\mindlog
 flutter run
 ```
-Flutter builds the app, installs it, and launches it on the emulator. The first build is
-slower; later runs are fast.
+The first Android build re-downloads Gradle and is slow (a few minutes); later runs are fast.
 
-### Step C — interact while it runs
-In the terminal where `flutter run` is active:
+While `flutter run` is active, in that terminal:
 | Key | Action |
 |-----|--------|
 | `r` | Hot reload (apply code changes instantly) |
-| `R` | Hot restart (restart app, keep emulator) |
+| `R` | Hot restart |
 | `h` | List all commands |
 | `q` | Quit and stop the app |
 
 ---
 
-## First-run walkthrough (and demo tips)
+## Part 4 — First-run walkthrough (and demo tips)
 
-1. **Create a passcode** (e.g. `1234`) and confirm it → this also creates the encrypted
-   database.
+1. **Create a passcode** (e.g. `1234`) and confirm → this also creates the encrypted database.
 2. You land on the **Home** dashboard with the quote of the day.
-3. Go to **Settings** (gear icon, top right) → **Add sample data** to instantly populate
-   entries, mood trend and the Insights chart — great for screenshots and the VIVA.
-4. Explore the tabs: **Diary** (＋ New entry, attach a photo), **Tasks**, **Insights**.
+3. **Settings** (gear icon, top right) → **Add sample data** to instantly populate entries,
+   the mood trend and the Insights chart — great for screenshots and the VIVA.
+4. Explore the tabs: **Diary** (＋ New entry, attach a photo), **Tasks**, **Insights**, plus
+   **Search** (magnifier).
 5. Tap the **lock icon** (top right) to lock; re-enter the passcode to unlock.
 
+> **Your data does not travel with the project.** The encrypted database, passcode and
+> keystore live on the device/emulator, not in the folder. A fresh install always starts
+> blank — set a new passcode and use *Add sample data*. That's expected for an encrypted,
+> local-first app.
+
 ### Emulator hardware features
-- **Camera** (photo attachment): the emulator has a simulated camera — usable, but a real
-  phone looks better in a demo.
+- **Camera** (photo attachment): the emulator has a simulated camera — usable; a real phone
+  looks better in a demo.
 - **Fingerprint** (biometric unlock): enable *Biometric unlock* in Settings, lock the app,
-  then open the emulator's **⋮ → Extended controls → Fingerprint → Touch sensor** to
-  authenticate.
+  then open the emulator's **⋮ → Extended controls → Fingerprint → Touch sensor**.
 - **Notifications**: enable the daily reminder in Settings (allow the permission prompt).
 
 ---
@@ -110,20 +150,20 @@ In the terminal where `flutter run` is active:
 ## Useful commands
 
 ```powershell
-flutter doctor            # check the toolchain is healthy
-flutter devices           # what can I run on?
-flutter run -d emulator-5554   # target a specific device
-flutter analyze           # static analysis (should say: No issues found)
-flutter test              # run unit tests
-flutter clean             # wipe build cache if something is stuck
+flutter doctor                 # check the toolchain is healthy
+flutter emulators              # list available emulators (and their Ids)
+flutter devices                # what can I run on right now?
+flutter run -d <device-id>     # target a specific device
+flutter analyze                # static analysis (should say: No issues found)
+flutter test                   # run unit tests
+flutter clean                  # wipe build cache if something is stuck
 ```
 
-## Taking screenshots for the report
-With the app on screen:
+### Taking screenshots for the report
+Easiest: the **camera icon** in the emulator's side toolbar. Or via adb:
 ```powershell
-& "C:\Users\chan\AppData\Local\Android\Sdk\platform-tools\adb.exe" exec-out screencap -p > shot.png
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" exec-out screencap -p > shot.png
 ```
-(or use the camera icon in the emulator's side toolbar).
 
 ---
 
@@ -131,8 +171,12 @@ With the app on screen:
 
 | Symptom | Fix |
 |--------|-----|
-| `emulator: ... requires hardware acceleration` | SVM not enabled in BIOS — redo one-time step 1. |
-| Emulator window never appears | `flutter emulators --launch Medium_Phone_API_36.1`; if still stuck, open **Android Studio → Device Manager** and start it there. |
-| `No devices found` in `flutter run` | Make sure the emulator finished booting; run `flutter devices`. |
-| Build fails after editing code | `flutter clean` then `flutter pub get`, run again. |
-| Forgot passcode | Long-press the app icon → App info → Storage → Clear data (this wipes the encrypted DB and lets you set a new passcode). |
+| `flutter` not recognised | `...\flutter\bin` isn't on PATH — add it, open a new terminal. |
+| `flutter doctor` shows Android ✗ | Install Android Studio + SDK, then `flutter doctor --android-licenses`. |
+| `No emulators available` | Create an AVD in Android Studio → Virtual Device Manager (Part 1.4). |
+| `... requires hardware acceleration` | Virtualization off in BIOS (SVM / VT-x) — redo Part 1.2; check `-accel-check`. |
+| Emulator window never appears | Launch it from **Android Studio → Device Manager** to see its error. |
+| `No devices found` in `flutter run` | Wait for the emulator to finish booting, then `flutter devices`. |
+| Build errors after transfer | `flutter clean`, then `flutter pub get`, then run again. |
+| Package/version errors on `pub get` | Ensure Flutter is **3.41+** (`flutter --version`); then `flutter pub get`. |
+| Forgot passcode | App icon → App info → Storage → **Clear data** (wipes the encrypted DB; set a new passcode). |
