@@ -39,11 +39,14 @@ class _QuoteCardState extends State<QuoteCard> {
                     Icon(Icons.format_quote,
                         color: scheme.onPrimaryContainer),
                     const SizedBox(width: 8),
-                    Text(
-                      'Quote of the day',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: scheme.onPrimaryContainer,
-                          ),
+                    Flexible(
+                      child: Text(
+                        'Quote of the day',
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: scheme.onPrimaryContainer,
+                            ),
+                      ),
                     ),
                     const Spacer(),
                     IconButton(

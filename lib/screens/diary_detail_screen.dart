@@ -67,8 +67,11 @@ class DiaryDetailScreen extends StatelessWidget {
             children: [
               Text(entry.mood.emoji, style: const TextStyle(fontSize: 34)),
               const SizedBox(width: 10),
-              Text(entry.mood.label,
-                  style: Theme.of(context).textTheme.titleMedium),
+              Flexible(
+                child: Text(entry.mood.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ),
               const Spacer(),
               Text(DateFormat.jm().format(entry.date),
                   style: Theme.of(context).textTheme.bodySmall),
