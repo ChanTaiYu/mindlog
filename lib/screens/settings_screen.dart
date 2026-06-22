@@ -92,8 +92,8 @@ class SettingsScreen extends StatelessWidget {
           const _SectionHeader('Data'),
           ListTile(
             leading: const Icon(Icons.science_outlined),
-            title: const Text('Add sample data'),
-            subtitle: const Text('Populate demo entries & tasks for testing'),
+            title: const Text('Load sample data'),
+            subtitle: const Text('Reset to ~2 weeks of demo entries & tasks'),
             onTap: () async {
               final diaryProvider = context.read<DiaryProvider>();
               final taskProvider = context.read<TaskProvider>();
@@ -102,7 +102,7 @@ class SettingsScreen extends StatelessWidget {
               await diaryProvider.load();
               await taskProvider.load();
               messenger.showSnackBar(
-                const SnackBar(content: Text('Sample data added.')),
+                const SnackBar(content: Text('Sample data loaded.')),
               );
             },
           ),

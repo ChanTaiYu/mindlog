@@ -195,42 +195,79 @@ class DatabaseService {
     return r.first['c'] as int;
   }
 
-  /// Populates a fortnight of varied entries and tasks for demos/VIVA.
+  /// Resets the data and populates a full fortnight of varied entries and
+  /// tasks, so the dashboard chart and the Insights page show rich data.
+  /// Re-running it replaces the demo data rather than piling up duplicates.
   Future<void> seedSampleData() async {
+    final db = _require;
+    await db.delete('entries');
+    await db.delete('tasks');
+
     final now = DateTime.now();
-    final samples = <(int, Mood, String, String)>[
-      (0, Mood.good, 'Productive Monday', 'Cleared my inbox and went for a run.'),
-      (1, Mood.okay, 'Steady day', 'Nothing special, kept things ticking over.'),
-      (2, Mood.great, 'Great catch-up', 'Met an old friend for coffee — felt recharged.'),
-      (3, Mood.bad, 'Rough patch', 'Deadline stress got to me a bit today.'),
-      (4, Mood.okay, 'Recovering', 'Took it slow and rested in the evening.'),
-      (6, Mood.good, 'Weekend reset', 'Tidied the flat and cooked properly.'),
-      (8, Mood.great, 'Breakthrough', 'Finally solved the bug I was stuck on!'),
-      (10, Mood.awful, 'Tough one', 'Felt low and unmotivated all day.'),
-      (12, Mood.good, 'Back on track', 'Small wins added up nicely.'),
+    DateTime dayAt(int ago, int hour) =>
+        DateTime(now.year, now.month, now.day, hour)
+            .subtract(Duration(days: ago));
+
+    // Mood + content for each of the last 14 days (i = 0 → 13 days ago).
+    const moods = [3, 4, 2, 5, 3, 1, 4, 3, 5, 2, 4, 3, 5, 4];
+    const titles = [
+      'Slow start', 'Good momentum', 'Rough patch', 'Great catch-up',
+      'Steady day', 'Tough one', 'Back on track', 'Ordinary day',
+      'Breakthrough', 'Recovering', 'Weekend reset', 'Quiet focus',
+      'Wonderful day', 'Productive Monday',
     ];
-    for (final (ago, mood, title, body) in samples) {
-      final d = now.subtract(Duration(days: ago, hours: 3));
+    const bodies = [
+      'Took a while to get going but got there.',
+      'Crossed off a lot from my list today.',
+      'Deadline stress got to me a bit.',
+      'Met an old friend for coffee — felt recharged.',
+      'Nothing special, kept things ticking over.',
+      'Felt low and unmotivated all day.',
+      'Small wins added up nicely.',
+      'A normal, uneventful day.',
+      'Finally solved the bug I was stuck on!',
+      'Took it slow and rested in the evening.',
+      'Tidied the flat and cooked properly.',
+      'Deep work with no distractions.',
+      'Everything just clicked today.',
+      'Cleared my inbox and went for a run.',
+    ];
+    for (var i = 0; i < 14; i++) {
       await insertEntry(DiaryEntry(
-          title: title, body: body, date: d, mood: mood));
-    }
-    final tasks = <(int, bool, int)>[
-      // (createdDaysAgo, done, completedDaysAgo)
-      (0, false, 0),
-      (1, true, 0),
-      (2, true, 2),
-      (3, true, 3),
-      (8, true, 8),
-      (10, true, 10),
-    ];
-    for (final (created, done, completedAgo) in tasks) {
-      await insertTask(Task(
-        title: 'Sample task ($created d ago)',
-        done: done,
-        createdAt: now.subtract(Duration(days: created)),
-        completedAt:
-            done ? now.subtract(Duration(days: completedAgo, hours: 2)) : null,
+        title: titles[i],
+        body: bodies[i],
+        date: dayAt(13 - i, 20),
+        mood: Mood.fromScore(moods[i]),
       ));
+    }
+    // A couple of extra same-day entries for variety.
+    await insertEntry(DiaryEntry(
+        title: 'Quick note',
+        body: 'A short afternoon thought.',
+        date: dayAt(2, 14),
+        mood: Mood.good));
+    await insertEntry(DiaryEntry(
+        title: 'Evening walk',
+        body: 'Cleared my head outside.',
+        date: dayAt(5, 19),
+        mood: Mood.great));
+
+    // Completed tasks spread across the fortnight drive the insight chart.
+    const completedPerDay = [1, 2, 0, 3, 1, 1, 2, 0, 2, 1, 3, 1, 2, 2];
+    for (var i = 0; i < 14; i++) {
+      for (var k = 0; k < completedPerDay[i]; k++) {
+        await insertTask(Task(
+          title: 'Task ${i + 1}.${k + 1}',
+          done: true,
+          createdAt: dayAt(13 - i, 9),
+          completedAt: dayAt(13 - i, 18),
+        ));
+      }
+    }
+    // A few open tasks for today.
+    for (final t in ['Reply to emails', 'Plan tomorrow', 'Read 20 pages']) {
+      await insertTask(
+          Task(title: t, done: false, createdAt: dayAt(0, 8)));
     }
   }
 }
