@@ -26,7 +26,11 @@ class _SearchScreenState extends State<SearchScreen> {
         moodScore: _mood?.score,
       );
 
-  void _refresh() => setState(() => _results = _run());
+  // Block body so the closure returns void — `setState(() => _x = future())`
+  // would return the Future and trip Flutter's "callback returned a Future".
+  void _refresh() => setState(() {
+        _results = _run();
+      });
 
   @override
   void dispose() {

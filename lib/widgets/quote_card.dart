@@ -52,8 +52,9 @@ class _QuoteCardState extends State<QuoteCard> {
                     IconButton(
                       tooltip: 'Refresh',
                       icon: Icon(Icons.refresh, color: scheme.onPrimaryContainer),
-                      onPressed: () => setState(
-                          () => _future = _service.todayQuote()),
+                      onPressed: () => setState(() {
+                        _future = _service.todayQuote();
+                      }),
                     ),
                   ],
                 ),
